@@ -1,0 +1,7 @@
+# Ignore virtual environments
+venv/
+stock-ai-env/
+*.pyc
+__pycache__/
+.env
+.DS_Store
