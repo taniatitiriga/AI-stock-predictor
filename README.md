@@ -80,5 +80,6 @@ The script will perform the following actions:
 
 ## Output
 
-![image](https://github.com/user-attachments/assets/06ae22e3-37be-4b0e-a09b-9ee447f5c033)
+![Screenshot 2025-05-10 164454](https://github.com/user-attachments/assets/bd139156-a634-4df6-9cb5-8273f926476d)
+
 ![image](https://github.com/user-attachments/assets/b469474f-d14b-438f-9736-25693e6575be)
