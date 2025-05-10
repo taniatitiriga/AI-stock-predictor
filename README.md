@@ -9,13 +9,13 @@ Follow these steps to set up the project environment:
 1.  **Clone the Repository:**
     If you haven't already, clone the project to your local machine:
     ```bash
-    git clone <your-github-repository-url>
-    cd stock_predictor_project
+    git clone [<your-github-repository-url>](https://github.com/taniatitiriga/AI-stock-predictor)
+    cd AI-stock-predictor
     ```
 
 2.  **Create a Python Virtual Environment:**
     It is highly recommended to use a virtual environment to isolate project dependencies. This ensures that the project uses the correct package versions and avoids conflicts with other Python projects.
-    Navigate to the project's root directory (`stock_predictor_project`) and run:
+    Navigate to the project's root directory (`AI-stock-predictor`) and run:
     ```bash
     python -m venv stock_env
     ```
