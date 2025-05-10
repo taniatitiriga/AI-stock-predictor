@@ -9,7 +9,7 @@ Follow these steps to set up the project environment:
 1.  **Clone the Repository:**
     If you haven't already, clone the project to your local machine:
     ```bash
-    git clone [<your-github-repository-url>](https://github.com/taniatitiriga/AI-stock-predictor)
+    git clone https://github.com/taniatitiriga/AI-stock-predictor
     cd AI-stock-predictor
     ```
 
