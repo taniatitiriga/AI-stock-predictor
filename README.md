@@ -77,3 +77,8 @@ The script will perform the following actions:
 *   Train the model using the training dataset.
 *   Make predictions on both the training and test datasets.
 *   Display plots comparing actual vs. predicted stock prices and the model's training/validation loss.
+
+## Output
+
+![image](https://github.com/user-attachments/assets/06ae22e3-37be-4b0e-a09b-9ee447f5c033)
+![image](https://github.com/user-attachments/assets/b469474f-d14b-438f-9736-25693e6575be)
