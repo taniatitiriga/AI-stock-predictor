@@ -1,6 +1,6 @@
 # Ignore virtual environments
 venv/
-stock-ai-env/
+stock_env/
 *.pyc
 __pycache__/
 .env
