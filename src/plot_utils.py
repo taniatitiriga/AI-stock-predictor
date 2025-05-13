@@ -51,7 +51,17 @@ def plot_loss(history):
     plt.show()
 
 def evaluate_model(y_true, y_pred, set_name="Test"):
-    """Compute RMSE"""
-    rmse = np.sqrt(np.mean((y_pred - y_true)**2))
+    y_true_flat = y_true.flatten()
+    y_pred_flat = y_pred.flatten()
+
+    mask = y_true_flat != 0
+    if np.sum(mask) == 0: # avoid 0 in MAPE (bad results)
+        mape = np.inf
+    else:
+        mape = np.mean(np.abs((y_true_flat[mask] - y_pred_flat[mask]) / y_true_flat[mask])) * 100
+
+    rmse = np.sqrt(np.mean((y_pred_flat - y_true_flat)**2))
+
     print(f"{set_name} RMSE: {rmse:.4f}")
-    return rmse
+    print(f"{set_name} MAPE: {mape:.2f}%")
+    return mape 

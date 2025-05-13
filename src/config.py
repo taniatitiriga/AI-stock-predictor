@@ -9,13 +9,8 @@ BATCH_SIZE = 32
 
 # multi-feature input
 FEATURES_TO_USE = [
-    'open',
-    'high',
-    'low',
-    'close',
-    'volume',
-    'sma_20',
-    'rsi_14',
-    'macd_12_26_9'
+    'open', 'high', 'low', 'close', 'volume',
+    'sma_20', 'rsi_14',
+    'macd_12_26_9', 'macdh_12_26_9', 'macds_12_26_9'
 ]
 TARGET_COLUMN = 'close' # predicted

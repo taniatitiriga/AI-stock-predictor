@@ -48,9 +48,6 @@ def preprocess_for_lstm(data_df, features_to_use, target_column, look_back, trai
     3. Creates sequences for X and y.
     4. Splits into training and testing sets.
     """
-    
-    print(f"Using features: {features_to_use}")
-    print(f"Target column: {target_column}")
 
     # target_column in features_to_use if it's not already
     all_columns_for_scaling = list(set(features_to_use + [target_column]))
@@ -88,8 +85,5 @@ def preprocess_for_lstm(data_df, features_to_use, target_column, look_back, trai
     
     X_train, X_test = X[0:training_size], X[training_size:len(X)]
     y_train, y_test = y[0:training_size], y[training_size:len(y)]
-
-    # print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
-    # print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
-    
+ 
     return scaler, X_train, X_test, y_train, y_test, model_data.columns.tolist(), target_col_index
