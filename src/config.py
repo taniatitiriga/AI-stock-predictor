@@ -1,7 +1,17 @@
+
+from datetime import datetime, timedelta
+
 # configuration
-TICKER = 'AAPL'
-START_DATE = '2020-01-01'
-END_DATE = '2023-12-31'
+TICKER = 'AAPL' # default
+TODAY_STR = datetime.today().strftime('%Y-%m-%d')
+YESTERDAY_STR = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+YEARS_FOR_BENCHMARK = 3
+BENCHMARK_END_DATE = YESTERDAY_STR
+BENCHMARK_START_DATE = (datetime.today() - timedelta(days=365 * YEARS_FOR_BENCHMARK)).strftime('%Y-%m-%d')
+START_DATE = (datetime.today() - timedelta(days=365 * 4)).strftime('%Y-%m-%d')
+END_DATE = YESTERDAY_STR 
+
 LOOK_BACK_WINDOW = 60
 TRAIN_SPLIT_RATIO = 0.8
 EPOCHS = 25

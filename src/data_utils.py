@@ -41,14 +41,6 @@ def fetch_stock_data(ticker, start_date, end_date):
     return data_df
 
 def preprocess_for_lstm(data_df, features_to_use, target_column, look_back, train_split_ratio):
-    """
-    Prepares data for LSTM:
-    1. Selects features.
-    2. Scales features.
-    3. Creates sequences for X and y.
-    4. Splits into training and testing sets.
-    """
-
     # target_column in features_to_use if it's not already
     all_columns_for_scaling = list(set(features_to_use + [target_column]))
     

@@ -1,12 +1,35 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
 from . import config
 
-def plot_predictions(original_data_df, look_back, 
-                     y_train_actual, train_predict, 
-                     y_test_actual, test_predict, 
-                     ticker_symbol):
-    """Draw actual vs. predicted prices"""
+def plot_future_prediction(historical_data_df, look_back_window, predicted_date, predicted_value, ticker_symbol, target_column_name='close'):
+    plt.figure(figsize=(15, 7))
+
+    plot_context_days = look_back_window + 90
+    if len(historical_data_df) > plot_context_days:
+        plot_data = historical_data_df.iloc[-plot_context_days:]
+    else:
+        plot_data = historical_data_df
+
+    plt.plot(plot_data.index, plot_data[target_column_name], label=f'Historical Actual {target_column_name}', color='blue')
+
+    predicted_datetime = pd.to_datetime(predicted_date)
+    plt.scatter([predicted_datetime], [predicted_value], color='red', marker='o', s=100, label=f'Predicted {target_column_name} for {predicted_date}', zorder=5)
+
+    plt.text(predicted_datetime, predicted_value, f'{predicted_value:.2f}', color='red', ha='left', va='bottom')
+
+
+    plt.title(f'{ticker_symbol} - {target_column_name.capitalize()} prediction [BETA]')
+    plt.xlabel('Date')
+    plt.ylabel(f'{target_column_name.capitalize()} Price (USD)')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    plt.show()
+
+def plot_predictions(original_data_df, look_back, y_train_actual, train_predict, y_test_actual, test_predict, ticker_symbol):
     plt.figure(figsize=(15, 7))
 
     date_index = original_data_df.index
