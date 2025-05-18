@@ -20,7 +20,7 @@ def plot_future_prediction(historical_data_df, look_back_window, predicted_date,
     plt.text(predicted_datetime, predicted_value, f'{predicted_value:.2f}', color='red', ha='left', va='bottom')
 
 
-    plt.title(f'{ticker_symbol} - {target_column_name.capitalize()} prediction [BETA]')
+    plt.title(f'{ticker_symbol} - {target_column_name.capitalize()} prediction')
     plt.xlabel('Date')
     plt.ylabel(f'{target_column_name.capitalize()} Price (USD)')
     plt.legend()

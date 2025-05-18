@@ -71,7 +71,7 @@ def benchmark(ticker_symbol):
     _ = evaluate_model(y_train_actual, train_predict, "Train")
     test_mape = evaluate_model(y_test_actual, test_predict, "Test")
 
-    plot_predictions(raw_data, config.LOOK_BACK_WINDOW, y_train_actual, train_predict, y_test_actual, test_predict, f"{ticker_symbol}_eval")
+    plot_predictions(raw_data, config.LOOK_BACK_WINDOW, y_train_actual, train_predict, y_test_actual, test_predict, f"{ticker_symbol}")
     # plot_loss(history, f"{ticker_symbol}_eval_loss")
 
     print("Done!")
@@ -280,8 +280,8 @@ def predict_next_week(ticker_symbol, historical_ta_input, nr_days=5):
     return predictions_for_week
 
 if __name__ == "__main__":
-    tickers = ['NVDA'] # lower noise example
-
+    tickers = []
+    
     benchmark_mapes = {}
     next_day_pred = {} 
     next_week_pred = {} 
@@ -289,9 +289,37 @@ if __name__ == "__main__":
     # flags
     RUN_BENCHMARK = False
     PREDICT_DAY = False
-    PREDICT_WEEK = True 
+    PREDICT_WEEK = False
     NR_DAYS = 5
-
+    
+    print("\n\nAI Stock Predictor\n")
+    print("This project uses LSTM (long short-term memory) neural network to perform time series analysis and forecasting. Historical data from Yahoo Finance.")
+    print("Disclaimer: the predictions made are based purely on historical data and mathematical analysis, therefore do not account for political or other external factors. This tool was build for academic purposes only.\n\n")
+    
+    quitted = False
+    while not quitted:
+        print(f"Current pick: {tickers}.")
+        ticker = input("Please input a valid ticker (e.g. SPLV - low in noise) or type 'continue': ").strip().upper()
+        if ticker == "CONTINUE":
+            ticket = None
+            quitted = True
+        elif ticker.isalnum():
+            tickers.append(ticker)
+        else:
+            print("Invalid ticker, please try again.")
+    
+    print(f"Final list: {tickers}.\n")
+    
+    print("Pick the feature(s) you wish to use:")
+    print("1. Benchmark - test the model on historical data and compare it to actual data. Errors measured with MAPE.")
+    RUN_BENCHMARK = input("Select feature? (y/n):").strip().lower() == "y"
+    print("2. Predict tomorrow - train the model on all available historical data and guess tomorrow's closing price.")
+    PREDICT_DAY = input("Select feature? (y/n):").strip().lower() == "y"
+    print("3. Predict next week - train the model on all available historical data and guess next week's closing prices (5 NYSE market days).")
+    PREDICT_WEEK = input("Select feature? (y/n):").strip().lower() == "y"
+    
+    print("\nThis may take a while - the prototype is still yet to be optimized :) \n\n")
+    
     for ticker in tickers:
         print(f"========== PROCESSING {ticker} ==========")
         historical_data_with_ta = None
