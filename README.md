@@ -78,8 +78,16 @@ The script will perform the following actions:
 *   Make predictions on both the training and test datasets.
 *   Display plots comparing actual vs. predicted stock prices and the model's training/validation loss.
 
-## Output
+## Example
 
-![Screenshot 2025-05-10 164454](https://github.com/user-attachments/assets/bd139156-a634-4df6-9cb5-8273f926476d)
+### Benchmarking
+![Figure_1](https://github.com/user-attachments/assets/2a9c3f10-d1a0-4d8b-975f-d1a4ab2a466c)
 
-![image](https://github.com/user-attachments/assets/b469474f-d14b-438f-9736-25693e6575be)
+### Predict tomorrow (generated on 18/05)
+Actual value: TBD
+![Figure_11](https://github.com/user-attachments/assets/0ed6fb67-b654-4d80-841f-541c569a32a8)
+
+### Predict next week (generated on 18/05)
+Actual values: TBD
+![Figure_2](https://github.com/user-attachments/assets/75758bdb-f19f-4949-bae2-b91c660c4c76)
+
