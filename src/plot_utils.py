@@ -73,6 +73,85 @@ def plot_loss(history):
     plt.grid(True)
     plt.show()
 
+def plot_weekly_predictions(
+    hist_df,
+    wk_preds_list,
+    tkr_sym,
+    tgt_col_name='close'
+):
+    if not wk_preds_list:
+        print(f"No weekly predictions to plot for {tkr_sym}.")
+        return
+
+    plt.figure(figsize=(15, 7))
+
+    first_pred_date_obj = pd.to_datetime(wk_preds_list[0]['date'])
+    
+    # --- MODIFIED: Select historical data for ~1 month context ---
+    # Define how many trading days roughly constitute a month (e.g., 20-22)
+    # Or use a fixed number of calendar days, e.g., 30.
+    # Let's aim for approximately 30 calendar days of history before the first prediction.
+    hist_context_days_approx = 30 
+    # Calculate the start date for the historical plot segment
+    hist_plot_start_date_target = first_pred_date_obj - pd.Timedelta(days=hist_context_days_approx)
+    
+    # Select historical data points that fall within this targeted historical window
+    # and are before the first prediction.
+    plot_hist_data_context = hist_df[
+        (hist_df.index >= hist_plot_start_date_target) & 
+        (hist_df.index < first_pred_date_obj)
+    ].copy()
+    
+    # Ensure there's at least *some* historical data if the above filter is too strict
+    # or if the prediction starts very close to the beginning of hist_df.
+    if plot_hist_data_context.empty and not hist_df[hist_df.index < first_pred_date_obj].empty:
+        # Fallback to last N actual historical points if the date range filter yields nothing
+        # but there is data before the prediction.
+        num_fallback_points = 20 # Show at least 20 points if possible
+        plot_hist_data_context = hist_df[hist_df.index < first_pred_date_obj].iloc[-num_fallback_points:].copy()
+
+
+    # Plot historical actual prices
+    if not plot_hist_data_context.empty and tgt_col_name in plot_hist_data_context.columns:
+        plt.plot(plot_hist_data_context.index, plot_hist_data_context[tgt_col_name], label=f'Historical {tgt_col_name}', color='blue', zorder=1)
+        last_hist_date = plot_hist_data_context.index[-1]
+        last_hist_value = plot_hist_data_context[tgt_col_name].iloc[-1]
+    else:
+        print(f"Warning: Not enough/no historical data or target column '{tgt_col_name}' missing for weekly plot context for {tkr_sym}.")
+        last_hist_date = None
+        last_hist_value = None
+
+    # ... (The rest of the function for preparing and plotting predictions remains THE SAME as before) ...
+    pred_dates_dt = [pd.to_datetime(p['date']) for p in wk_preds_list]
+    pred_values_num = [p['prediction'] for p in wk_preds_list]
+
+    plot_pred_line_dates = []
+    plot_pred_line_values = []
+
+    if last_hist_date is not None and last_hist_value is not None:
+        plot_pred_line_dates.append(last_hist_date)
+        plot_pred_line_values.append(last_hist_value)
+    
+    plot_pred_line_dates.extend(pred_dates_dt)
+    plot_pred_line_values.extend(pred_values_num)
+    
+    if plot_pred_line_dates:
+        plt.plot(plot_pred_line_dates, plot_pred_line_values, color='red', linestyle='--', label=f'Predicted {tgt_col_name} (Next Week)', zorder=2)
+
+    if pred_dates_dt:
+        plt.scatter(pred_dates_dt, pred_values_num, color='red', marker='o', s=30, zorder=3)
+
+    for date_pt, val_pt in zip(pred_dates_dt, pred_values_num):
+        plt.text(date_pt, val_pt, f'{val_pt:.2f}', color='red', ha='left', va='bottom', fontsize=8)
+
+    plt.title(f'{tkr_sym} - Next Week {tgt_col_name.capitalize()} Prediction ({len(wk_preds_list)} days)')
+    plt.xlabel('Date')
+    plt.ylabel(f'{tgt_col_name.capitalize()} Price (USD)')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
 def evaluate_model(y_true, y_pred, set_name="Test"):
     y_true_flat = y_true.flatten()
     y_pred_flat = y_pred.flatten()

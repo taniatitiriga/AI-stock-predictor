@@ -5,7 +5,7 @@ import pandas_market_calendars as mcal
 from src import config
 from src.data_utils import fetch_stock_data, preprocess_for_lstm
 from src.model_utils import build_lstm_model, train_lstm_model, make_predictions, inverse_transform_predictions
-from src.plot_utils import plot_predictions, plot_loss, evaluate_model, plot_future_prediction
+from src.plot_utils import plot_predictions, plot_loss, evaluate_model, plot_future_prediction, plot_weekly_predictions
 import pandas_ta as ta
 
 def benchmark(ticker_symbol):
@@ -27,8 +27,8 @@ def benchmark(ticker_symbol):
 
         raw_data_ta.columns = raw_data_ta.columns.str.lower().str.strip()
         
-        raw_data_ta.fillna(method='ffill', inplace=True)
-        raw_data_ta.fillna(method='bfill', inplace=True)
+        raw_data_ta.ffill(inplace=True)
+        raw_data_ta.bfill(inplace=True)
     else:
         print(f"'volume' column not found for {ticker_symbol}")
     
@@ -78,7 +78,7 @@ def benchmark(ticker_symbol):
     
     return test_mape, eval_model, scaler, scaled_cols_names, target_idx, raw_data_ta
 
-def predict(ticker_symbol, historical_ta):
+def predict_next_day(ticker_symbol, historical_ta):
     print(f"\n Making predictions for {ticker_symbol}...")
 
     if historical_ta is None or historical_ta.empty:
@@ -145,7 +145,7 @@ def predict(ticker_symbol, historical_ta):
     
     prediction_date_str = prediction_date.strftime('%Y-%m-%d')
 
-    print(f"Predicted {config.TARGET_COLUMN} for {ticker_symbol} on {prediction_date.strftime('%Y-%m-%d')}: {predicted_value:.2f}")
+    print(f"Predicted {config.TARGET_COLUMN} for {ticker_symbol} on {prediction_date_str}: {predicted_value:.2f}")
     
     plot_future_prediction(
         historical_ta,
@@ -157,35 +157,208 @@ def predict(ticker_symbol, historical_ta):
     )
     return prediction_date_str, predicted_value
 
+def predict_next_week(ticker_symbol, historical_ta_input, nr_days=5):
+    print(f"\n Making predictions for the next {nr_days} trading days for {ticker_symbol}...")
+
+    if historical_ta_input is None or historical_ta_input.empty:
+        print(f"No historical data provided for {ticker_symbol} to predict next week.")
+        return []
+
+    historical_ta_for_model = historical_ta_input.copy() # copy for model training
+    
+    scaler, X_all_initial, _, y_all_initial, _, scaled_col_names, target_idx = preprocess_for_lstm(
+        historical_ta_for_model.copy(),
+        config.FEATURES_TO_USE,
+        config.TARGET_COLUMN,
+        config.LOOK_BACK_WINDOW,
+        train_split_ratio=1.0 
+    )
+
+    if X_all_initial.size == 0:
+        print(f"Insufficient data to train model for weekly prediction for {ticker_symbol}.")
+        return []
+
+    input_shape = (X_all_initial.shape[1], X_all_initial.shape[2])
+    model = build_lstm_model(input_shape)
+
+    print(f"Training model on all historical data for {ticker_symbol} (for weekly prediction)...")
+    model.fit(
+        X_all_initial, y_all_initial,
+        epochs=config.EPOCHS,
+        batch_size=config.BATCH_SIZE,
+        verbose=1 # customizable
+    )
+
+    # iterate next week
+    predictions_for_week = []
+    curr_last_data_ta = historical_ta_input.copy() # Data to append predictions to for TA recalculation
+    curr_last_seq_scaled = X_all_initial[-1:, :, :] # Last sequence from initial scaled data
+
+    calendar = mcal.get_calendar('NYSE')
+
+    for i in range(nr_days):
+        # determine next trading day
+        last_date = curr_last_data_ta.index[-1]
+        
+        sched = calendar.schedule(
+            start_date=last_date.strftime('%Y-%m-%d'),
+            end_date=(last_date + timedelta(days=15)).strftime('%Y-%m-%d') # look ahead further (bug fix?)
+        )
+        prediction_dates = sched.index.normalize()
+        target_date = None
+        for potential_date in prediction_dates:
+            if potential_date > last_date:
+                target_date = potential_date
+                break
+        
+        if target_date is None:
+            print(f"Warning: Could not find next trading day after {last_date.strftime('%Y-%m-%d')}. Stopping weekly prediction.")
+            break 
+        
+        target_date_str = target_date.strftime('%Y-%m-%d')
+
+        # predict using current last sequence scaled
+        predicted_scaled = model.predict(curr_last_seq_scaled)
+        predicted_actual = inverse_transform_predictions(predicted_scaled, scaler, scaled_col_names, target_idx)[0,0]
+
+        print(f"Day {i+1}/{nr_days}: Predicted {config.TARGET_COLUMN} for {target_date_str}: {predicted_actual:.2f}")
+        predictions_for_week.append({"date": target_date_str, "prediction": predicted_actual})
+
+        # prepare next
+        if i < nr_days - 1:
+            # create synthetic row for predicted day
+            row_feat = {col: np.nan for col in config.FEATURES_TO_USE}
+            # fill OHLC with predicted close, vol. - last known
+            row_feat['open'] = predicted_actual
+            row_feat['high'] = predicted_actual 
+            row_feat['low'] = predicted_actual
+            row_feat[config.TARGET_COLUMN] = predicted_actual
+            if 'volume' in row_feat and not curr_last_data_ta['volume'].empty:
+                 row_feat['volume'] = curr_last_data_ta['volume'].iloc[-1]
+
+            new_row_df = pd.DataFrame([row_feat], index=[target_date])
+            
+            # append new row to data
+            curr_last_data_ta = pd.concat([curr_last_data_ta, new_row_df])
+            
+            # recalculate TA
+            if 'volume' in curr_last_data_ta.columns:
+                ta_df_temp = curr_last_data_ta.copy() # copy for TA
+                
+
+                ta_cols_to_drop = [col for col in ta_df_temp.columns if 'sma_' in col or 'rsi_' in col or 'macd_' in col or 'macds_' in col or 'macdh_' in col]
+                ta_df_temp.drop(columns=ta_cols_to_drop, inplace=True, errors='ignore')
+
+                ta_df_temp.ta.sma(length=20, append=True)
+                ta_df_temp.ta.rsi(length=14, append=True)
+                ta_df_temp.ta.macd(append=True)
+                ta_df_temp.columns = ta_df_temp.columns.str.lower().str.strip() # clean names
+                ta_df_temp.ffill(inplace=True) # fill NaNs from new TA calcs
+                ta_df_temp.bfill(inplace=True)
+                curr_last_data_ta = ta_df_temp # update with new TAs
+
+
+            updated_last_window = curr_last_data_ta[scaled_col_names].iloc[-config.LOOK_BACK_WINDOW:]
+            
+            if len(updated_last_window) < config.LOOK_BACK_WINDOW:
+                print("Warning: Not enough data for look_back after appending prediction. Stopping.")
+                break
+            
+            # use initial scaler
+            current_last_sequence_scaled_array = scaler.transform(updated_last_window)
+            curr_last_seq_scaled = np.expand_dims(current_last_sequence_scaled_array, axis=0)
+    
+    # draw
+    if predictions_for_week:
+        plot_weekly_predictions(
+            historical_ta_input,
+            predictions_for_week,
+            ticker_symbol,
+            config.TARGET_COLUMN
+        )
+    
+    return predictions_for_week
 
 if __name__ == "__main__":
-    tickers = ['SPLV'] # lower noise example
+    tickers = ['NVDA'] # lower noise example
 
-    benchmark_mape = {}
-    predictions = {}
-
-    # TBD customizable
-    to_predict = True
+    benchmark_mapes = {}
+    next_day_pred = {} 
+    next_week_pred = {} 
+    
+    # flags
+    RUN_BENCHMARK = False
+    PREDICT_DAY = False
+    PREDICT_WEEK = True 
+    NR_DAYS = 5
 
     for ticker in tickers:
-        mape, model, scaler, s_cols, t_idx, data_df = benchmark(ticker)
+        print(f"========== PROCESSING {ticker} ==========")
+        historical_data_with_ta = None
 
-        if mape is not None:
-            benchmark_mape[ticker] = mape
+        if RUN_BENCHMARK:
+            mape, _, _, _, _, data_df_from_benchmark = benchmark(ticker)
+            if mape is not None:
+                benchmark_mapes[ticker] = mape
+            if data_df_from_benchmark is not None:
+                historical_data_with_ta = data_df_from_benchmark
+        else:
+            # fetch data directly for prediction phases
+            print(f"Fetching data for {ticker}...")
+            
+            raw_data_for_predict = fetch_stock_data(ticker, config.START_DATE, config.END_DATE)
+            if raw_data_for_predict is not None and not raw_data_for_predict.empty:
+                temp_data_ta = raw_data_for_predict.copy()
+                
+                if 'volume' in temp_data_ta.columns:
+                    temp_data_ta.ta.sma(length=20, append=True)
+                    temp_data_ta.ta.rsi(length=14, append=True)
+                    temp_data_ta.ta.macd(append=True)
+                    
+                    temp_data_ta.columns = temp_data_ta.columns.str.lower().str.strip()
+                    temp_data_ta.ffill(inplace=True)
+                    temp_data_ta.bfill(inplace=True)
+                    
+                    historical_data_with_ta = temp_data_ta
+                    
+                else:
+                    print(f"'volume' column not found for {ticker}, TA indicators skipped for direct prediction.")
+                    historical_data_with_ta = raw_data_for_predict 
+            else:
+                print(f"Could not fetch data for {ticker} for prediction phases.")
 
-        if to_predict and data_df is not None:
-            pred_date, pred_value = predict(ticker, data_df)
-            if pred_date is not None:
-                predictions[ticker] = {"date": pred_date, "prediction": pred_value}
-        elif to_predict:
-            print(f"Insufficient data for {ticker}")
+
+        if PREDICT_DAY:
+            if historical_data_with_ta is not None:
+                pred_date, pred_value = predict_next_day(ticker, historical_data_with_ta) # MODIFIED: Using renamed function
+                if pred_date is not None:
+                    next_day_pred[ticker] = {"date": pred_date, "prediction": pred_value}
+            else:
+                print(f"Next day prediction for {ticker} - missing historical data.")
+        
+        if PREDICT_WEEK:
+            if historical_data_with_ta is not None:
+                weekly_preds = predict_next_week(ticker, historical_data_with_ta, NR_DAYS)
+                if weekly_preds: # If list is not empty
+                    next_week_pred[ticker] = weekly_preds
+            else:
+                print(f"Next week prediction for {ticker} - missing historical data.")
 
 
-    print("\n Benchmark results:")
-    for ticker, mape_val in benchmark_mape.items():
-        print(f"{ticker} test MAPE = {mape_val:.2f}%")
+    if RUN_BENCHMARK:
+        print("\n Benchmark results:")
+        for ticker, mape_val in benchmark_mapes.items():
+            print(f"{ticker} test MAPE = {mape_val:.2f}%")
 
-    if to_predict:
-        print(f"\nPrediction summary (1 day after {config.END_DATE})")
-        for ticker, pred_info in predictions.items():
-            print(f"{ticker} \nDate: {pred_info['date']}, Predicted {config.TARGET_COLUMN} = {pred_info['prediction']:.2f}")
+    if PREDICT_DAY: 
+        print(f"\nSingle Next Day Prediction summary (1 trading day after {config.END_DATE})")
+        
+        for ticker, pred_info in next_day_pred.items():
+            print(f"  {ticker} \n  Date: {pred_info['date']}, Predicted {config.TARGET_COLUMN} = {pred_info['prediction']:.2f}")
+    
+    if PREDICT_WEEK:
+        print(f"\nUpcoming Week Prediction summary ({NR_DAYS} trading days after {config.END_DATE})")
+        for ticker, weekly_preds_list in next_week_pred.items():
+            print(f"{ticker}:")
+            for pred_info in weekly_preds_list:
+                 print(f"Date: {pred_info['date']}, Predicted {config.TARGET_COLUMN} = {pred_info['prediction']:.2f}")
