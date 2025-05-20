@@ -87,27 +87,16 @@ def plot_weekly_predictions(
 
     first_pred_date_obj = pd.to_datetime(wk_preds_list[0]['date'])
     
-    # --- MODIFIED: Select historical data for ~1 month context ---
-    # Define how many trading days roughly constitute a month (e.g., 20-22)
-    # Or use a fixed number of calendar days, e.g., 30.
-    # Let's aim for approximately 30 calendar days of history before the first prediction.
     hist_context_days_approx = 30 
-    # Calculate the start date for the historical plot segment
     hist_plot_start_date_target = first_pred_date_obj - pd.Timedelta(days=hist_context_days_approx)
     
-    # Select historical data points that fall within this targeted historical window
-    # and are before the first prediction.
     plot_hist_data_context = hist_df[
         (hist_df.index >= hist_plot_start_date_target) & 
         (hist_df.index < first_pred_date_obj)
     ].copy()
     
-    # Ensure there's at least *some* historical data if the above filter is too strict
-    # or if the prediction starts very close to the beginning of hist_df.
     if plot_hist_data_context.empty and not hist_df[hist_df.index < first_pred_date_obj].empty:
-        # Fallback to last N actual historical points if the date range filter yields nothing
-        # but there is data before the prediction.
-        num_fallback_points = 20 # Show at least 20 points if possible
+        num_fallback_points = 20
         plot_hist_data_context = hist_df[hist_df.index < first_pred_date_obj].iloc[-num_fallback_points:].copy()
 
 
@@ -121,7 +110,6 @@ def plot_weekly_predictions(
         last_hist_date = None
         last_hist_value = None
 
-    # ... (The rest of the function for preparing and plotting predictions remains THE SAME as before) ...
     pred_dates_dt = [pd.to_datetime(p['date']) for p in wk_preds_list]
     pred_values_num = [p['prediction'] for p in wk_preds_list]
 

@@ -382,7 +382,7 @@ if __name__ == "__main__":
         print(f"\nSingle Next Day Prediction summary (1 trading day after {config.END_DATE})")
         
         for ticker, pred_info in next_day_pred.items():
-            print(f"  {ticker} \n  Date: {pred_info['date']}, Predicted {config.TARGET_COLUMN} = {pred_info['prediction']:.2f}")
+            print(f"{ticker} \nDate: {pred_info['date']}, Predicted {config.TARGET_COLUMN} = {pred_info['prediction']:.2f}")
     
     if PREDICT_WEEK:
         print(f"\nUpcoming Week Prediction summary ({NR_DAYS} trading days after {config.END_DATE})")
